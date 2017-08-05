@@ -23,6 +23,20 @@ class DoorBird(object):
         self._http.add_credentials(username, password)
 
     """
+    Test the connection to the device.
+    
+    :returns: True if the device is connected and returning data.
+    """
+    @property
+    def ready(self):
+        url = self.__url("info.cgi", auth=False)
+        try:
+            response, content = self._http.request(url)
+            return json.loads(content)["BHA"]["RETURNCODE"] == 1
+        except:
+            return False
+
+    """
     A multipart JPEG live video stream with the default resolution and
     compression as defined in the system configuration.
     
@@ -171,7 +185,7 @@ class DoorBird(object):
     :returns: A dictionary of the device information:
     - FIRMWARE
     - BUILD_NUMBER
-    - WIFI_MAC_ADDR
+    - WIFI_MAC_ADDR (if the device is connected via WiFi)
     """
     @property
     def info(self):
