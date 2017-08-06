@@ -25,16 +25,17 @@ class DoorBird(object):
     """
     Test the connection to the device.
     
-    :returns: True if the device is connected and returning data.
+    :returns: A tuple containing the ready status (True/False) and the HTTP 
+    status code returned by the device or 0 for no status
     """
-    @property
     def ready(self):
         url = self.__url("info.cgi", auth=False)
+        response, content = self._http.request(url)
         try:
-            response, content = self._http.request(url)
-            return json.loads(content)["BHA"]["RETURNCODE"] == 1
-        except:
-            return False
+            code = json.loads(content)["BHA"]["RETURNCODE"]
+            return int(code) == 1, int(response["status"])
+        except json.decoder.JSONDecodeError:
+            return False, int(response["status"])
 
     """
     A multipart JPEG live video stream with the default resolution and
@@ -64,7 +65,7 @@ class DoorBird(object):
     def open_door(self):
         url = self.__url("open-door.cgi", auth=False)
         response, content = self._http.request(url)
-        return json.loads(content)["BHA"]["RETURNCODE"] == 1
+        return int(json.loads(content)["BHA"]["RETURNCODE"]) == 1
 
     """
     Energize the light relay of the device.
@@ -74,7 +75,8 @@ class DoorBird(object):
     def turn_light_on(self):
         url = self.__url("light-on.cgi", auth=False)
         response, content = self._http.request(url)
-        return json.loads(content)["BHA"]["RETURNCODE"] == 1
+        code = json.loads(content)["BHA"]["RETURNCODE"]
+        return int(code) == 1
 
     """
     A past image stored in the cloud.
@@ -93,7 +95,6 @@ class DoorBird(object):
     
     :returns: A list of dictionaries
     """
-    @property
     def notifications(self):
         url = self.__url("notification.cgi", auth=False)
         response, content = self._http.request(url)
@@ -129,7 +130,7 @@ class DoorBird(object):
             "relaxation": relaxation,
         }, auth=False)
         response, content = self._http.request(url)
-        return response["status"] == 200
+        return int(response["status"]) == 200
 
     """
     Disable an existing notification.
@@ -143,14 +144,13 @@ class DoorBird(object):
             "subscribe": 0
         }, auth=False)
         response, content = self._http.request(url)
-        return response["status"] == 200
+        return int(response["status"]) == 200
 
     """
     The current state of the doorbell.
     
     :returns: True for pressed, False for idle
     """
-    @property
     def doorbell_state(self):
         url = self.__url("monitor.cgi", {
             "check": "doorbell"
@@ -158,7 +158,8 @@ class DoorBird(object):
         response, content = self._http.request(url)
 
         try:
-            return content.decode(sys.stdin.encoding).split("=")[1] == 1
+            content = content.decode(sys.stdin.encoding)
+            return int(content.split("=")[1]) == 1
         except IndexError:
             return False
 
@@ -167,7 +168,6 @@ class DoorBird(object):
     
     :returns: True for motion, False for idle
     """
-    @property
     def motion_sensor_state(self):
         url = self.__url("monitor.cgi", {
             "check": "motionsensor"
@@ -175,7 +175,8 @@ class DoorBird(object):
         response, content = self._http.request(url)
 
         try:
-            return content.decode(sys.stdin.encoding).split("=")[1] == 1
+            content = content.decode(sys.stdin.encoding)
+            return int(content.split("=")[1]) == 1
         except IndexError:
             return False
 
@@ -187,7 +188,6 @@ class DoorBird(object):
     - BUILD_NUMBER
     - WIFI_MAC_ADDR (if the device is connected via WiFi)
     """
-    @property
     def info(self):
         url = self.__url("info.cgi", auth=False)
         response, content = self._http.request(url)
