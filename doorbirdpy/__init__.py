@@ -32,7 +32,7 @@ class DoorBird(object):
         url = self.__url("info.cgi", auth=False)
         response, content = self._http.request(url)
         try:
-            code = json.loads(content)["BHA"]["RETURNCODE"]
+            code = json.loads(content.decode('utf-8'))["BHA"]["RETURNCODE"]
             return int(code) == 1, int(response["status"])
         except json.decoder.JSONDecodeError:
             return False, int(response["status"])
@@ -65,7 +65,7 @@ class DoorBird(object):
     def open_door(self):
         url = self.__url("open-door.cgi", auth=False)
         response, content = self._http.request(url)
-        return int(json.loads(content)["BHA"]["RETURNCODE"]) == 1
+        return int(json.loads(content.decode('utf-8'))["BHA"]["RETURNCODE"]) == 1
 
     """
     Energize the light relay of the device.
@@ -75,7 +75,7 @@ class DoorBird(object):
     def turn_light_on(self):
         url = self.__url("light-on.cgi", auth=False)
         response, content = self._http.request(url)
-        code = json.loads(content)["BHA"]["RETURNCODE"]
+        code = json.loads(content.decode('utf-8'))["BHA"]["RETURNCODE"]
         return int(code) == 1
 
     """
@@ -98,7 +98,7 @@ class DoorBird(object):
     def notifications(self):
         url = self.__url("notification.cgi", auth=False)
         response, content = self._http.request(url)
-        return json.loads(content)["BHA"]["NOTIFICATIONS"]
+        return json.loads(content.decode('utf-8'))["BHA"]["NOTIFICATIONS"]
 
     """
     Reset notification settings.
@@ -191,7 +191,7 @@ class DoorBird(object):
     def info(self):
         url = self.__url("info.cgi", auth=False)
         response, content = self._http.request(url)
-        return json.loads(content)["BHA"]["VERSION"][0]
+        return json.loads(content.decode('utf-8'))["BHA"]["VERSION"][0]
 
     """
     Live video request over RTSP.
