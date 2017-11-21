@@ -32,7 +32,9 @@ class DoorBird(object):
         url = self.__url("info.cgi", auth=False)
         response, content = self._http.request(url)
         try:
-            code = json.loads(content.decode('utf-8'))["BHA"]["RETURNCODE"]
+            body_text = content.decode(encoding='utf-8')
+            body_json = json.loads(body_text)
+            code = body_json["BHA"]["RETURNCODE"]
             return int(code) == 1, int(response["status"])
         except json.decoder.JSONDecodeError:
             return False, int(response["status"])
