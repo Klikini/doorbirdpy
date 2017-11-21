@@ -36,7 +36,7 @@ class DoorBird(object):
             body_json = json.loads(body_text)
             code = body_json["BHA"]["RETURNCODE"]
             return int(code) == 1, int(response["status"])
-        except json.decoder.JSONDecodeError:
+        except ValueError:
             return False, int(response["status"])
 
     """
