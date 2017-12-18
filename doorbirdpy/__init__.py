@@ -109,7 +109,8 @@ class DoorBird(object):
         url = self.__url("notification.cgi", {
             "reset": 1
         }, auth=False)
-        self._http.request(url)
+        response, content = self._http.request(url)
+        return int(response["status"]) == 200
 
     """
     Subscribe an event notification.
@@ -123,14 +124,22 @@ class DoorBird(object):
     """
     def subscribe_notification(self, event, url, user=None, password=None,
                                relaxation=None):
-        url = self.__url("notification.cgi", {
+        params = {
             "url": url,
-            "user": user,
-            "password": password,
             "event": event,
-            "subscribe": 1,
-            "relaxation": relaxation,
-        }, auth=False)
+            "subscribe": 1
+        }
+
+        if user:
+            params["user"] = user
+
+        if password:
+            params["password"] = password
+
+        if relaxation:
+            params["relaxation"] = relaxation
+
+        url = self.__url("notification.cgi", params, auth=False)
         response, content = self._http.request(url)
         return int(response["status"]) == 200
 
