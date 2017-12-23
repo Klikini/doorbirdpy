@@ -87,9 +87,10 @@ class DoorBird(object):
     history image
     :returns: The URL of the image.
     """
-    def history_image_url(self, index):
+    def history_image_url(self, index, event):
         return self.__url("history.cgi", {
-            "index": index
+            "index": index,
+            "event": event
         })
 
     """
