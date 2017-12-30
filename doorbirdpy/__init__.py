@@ -32,9 +32,11 @@ class DoorBird(object):
         url = self.__url("info.cgi", auth=False)
         response, content = self._http.request(url)
         try:
-            code = json.loads(content.decode('utf-8'))["BHA"]["RETURNCODE"]
+            body_text = content.decode(encoding='utf-8')
+            body_json = json.loads(body_text)
+            code = body_json["BHA"]["RETURNCODE"]
             return int(code) == 1, int(response["status"])
-        except json.decoder.JSONDecodeError:
+        except ValueError:
             return False, int(response["status"])
 
     """
@@ -85,9 +87,10 @@ class DoorBird(object):
     history image
     :returns: The URL of the image.
     """
-    def history_image_url(self, index):
+    def history_image_url(self, index, event):
         return self.__url("history.cgi", {
-            "index": index
+            "index": index,
+            "event": event
         })
 
     """
@@ -107,7 +110,8 @@ class DoorBird(object):
         url = self.__url("notification.cgi", {
             "reset": 1
         }, auth=False)
-        self._http.request(url)
+        response, content = self._http.request(url)
+        return int(response["status"]) == 200
 
     """
     Subscribe an event notification.
@@ -121,14 +125,22 @@ class DoorBird(object):
     """
     def subscribe_notification(self, event, url, user=None, password=None,
                                relaxation=None):
-        url = self.__url("notification.cgi", {
+        params = {
             "url": url,
-            "user": user,
-            "password": password,
             "event": event,
-            "subscribe": 1,
-            "relaxation": relaxation,
-        }, auth=False)
+            "subscribe": 1
+        }
+
+        if user:
+            params["user"] = user
+
+        if password:
+            params["password"] = password
+
+        if relaxation:
+            params["relaxation"] = relaxation
+
+        url = self.__url("notification.cgi", params, auth=False)
         response, content = self._http.request(url)
         return int(response["status"]) == 200
 
