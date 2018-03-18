@@ -64,8 +64,10 @@ class DoorBird(object):
     
     :returns: True if OK, False if not
     """
-    def open_door(self):
-        url = self.__url("open-door.cgi", auth=False)
+    def open_door(self, relay=1):
+        url = self.__url("open-door.cgi", {
+            "r": relay
+        }, auth=False)
         response, content = self._http.request(url)
         return int(json.loads(content.decode('utf-8'))["BHA"]["RETURNCODE"]) == 1
 
