@@ -3,6 +3,7 @@ import httplib2
 import json
 import sys
 from urllib.parse import urlencode
+from doorbirdpy.schedule_entry import DoorBirdScheduleEntry, DoorBirdScheduleEntryOutput, DoorBirdScheduleEntrySchedule
 
 
 class DoorBird(object):
@@ -25,16 +26,15 @@ class DoorBird(object):
     """
     Test the connection to the device.
     
-    :returns: A tuple containing the ready status (True/False) and the HTTP 
+    :return: A tuple containing the ready status (True/False) and the HTTP 
     status code returned by the device or 0 for no status
     """
     def ready(self):
         url = self.__url("info.cgi", auth=False)
         response, content = self._http.request(url)
         try:
-            body_text = content.decode(encoding='utf-8')
-            body_json = json.loads(body_text)
-            code = body_json["BHA"]["RETURNCODE"]
+            data = self.__request(url)
+            code = data["BHA"]["RETURNCODE"]
             return int(code) == 1, int(response["status"])
         except ValueError:
             return False, int(response["status"])
@@ -43,7 +43,7 @@ class DoorBird(object):
     A multipart JPEG live video stream with the default resolution and
     compression as defined in the system configuration.
     
-    :returns: The URL of the stream
+    :return: The URL of the stream
     """
     @property
     def live_video_url(self):
@@ -53,33 +53,31 @@ class DoorBird(object):
     A JPEG file with the default resolution and compression as 
     defined in the system configuration.
     
-    :returns: The URL of the image
+    :return: The URL of the image
     """
     @property
     def live_image_url(self):
         return self.__url("image.cgi")
 
     """
-    Energize the door opener/alarm output relay of the device.
+    Energize a door opener/alarm output/etc relay of the device.
     
-    :returns: True if OK, False if not
+    :return: True if OK, False if not
     """
-    def open_door(self, relay=1):
-        url = self.__url("open-door.cgi", {
+    def energize_relay(self, relay=1):
+        data = self.__request(self.__url("open-door.cgi", {
             "r": relay
-        }, auth=False)
-        response, content = self._http.request(url)
-        return int(json.loads(content.decode('utf-8'))["BHA"]["RETURNCODE"]) == 1
+        }, auth=False))
+        return int(data["BHA"]["RETURNCODE"]) == 1
 
     """
-    Energize the light relay of the device.
+    Turn on the IR lights.
     
-    :returns: JSON
+    :return: JSON
     """
     def turn_light_on(self):
-        url = self.__url("light-on.cgi", auth=False)
-        response, content = self._http.request(url)
-        code = json.loads(content.decode('utf-8'))["BHA"]["RETURNCODE"]
+        data = self.__request(self.__url("light-on.cgi", auth=False))
+        code = data["BHA"]["RETURNCODE"]
         return int(code) == 1
 
     """
@@ -87,7 +85,7 @@ class DoorBird(object):
 
     :param index: Index of the history images, where 1 is the latest 
     history image
-    :returns: The URL of the image.
+    :return: The URL of the image.
     """
     def history_image_url(self, index, event):
         return self.__url("history.cgi", {
@@ -96,66 +94,37 @@ class DoorBird(object):
         })
 
     """
-    Get notification settings.
+    Get schedule settings.
     
-    :returns: A list of dictionaries
+    :return: A list of DoorBirdScheduleEntry objects
     """
-    def notifications(self):
-        url = self.__url("notification.cgi", auth=False)
-        response, content = self._http.request(url)
-        return json.loads(content.decode('utf-8'))["BHA"]["NOTIFICATIONS"]
+    def schedule(self):
+        data = self.__request(self.__url("schedule.cgi", auth=False))
+        return DoorBirdScheduleEntry.parse_all(data)
 
     """
-    Reset notification settings.
-    """
-    def reset_notifications(self):
-        url = self.__url("notification.cgi", {
-            "reset": 1
-        }, auth=False)
-        response, content = self._http.request(url)
-        return int(response["status"]) == 200
-
-    """
-    Subscribe an event notification.
+    Add or replace a schedule entry.
     
-    :param event: Event type (doorbell, motionsensor, dooropen)
-    :param url: HTTP or HTTPS URL to call with GET command if the event occurs
-    :param user: Basic or Digest authentication user for the HTTP URL
-    :param password: Basic or Digest authentication password or the HTTP URL
-    :param relaxation: Relaxation time in seconds, for concurrent events.
-    :returns: True if OK, False if not
+    :param entry: A DoorBirdScheduleEntry object to replace on the device
+    :return: A tuple containing the success status (True/False) and the HTTP response code
     """
-    def subscribe_notification(self, event, url, user=None, password=None,
-                               relaxation=None):
-        params = {
-            "url": url,
-            "event": event,
-            "subscribe": 1
-        }
-
-        if user:
-            params["user"] = user
-
-        if password:
-            params["password"] = password
-
-        if relaxation:
-            params["relaxation"] = relaxation
-
-        url = self.__url("notification.cgi", params, auth=False)
-        response, content = self._http.request(url)
-        return int(response["status"]) == 200
+    def change_schedule(self, entry):
+        url = self.__url("schedule.cgi", auth=False)
+        response, content = self._http.request(url, "POST", json.dumps(entry.export))
+        return int(response["status"]) == 200, response["status"]
 
     """
-    Disable an existing notification.
+    Delete a schedule entry.
     
-    :param event: Event type (doorbell, motionsensor, dooropen)
-    :returns: True if OK, False if not
+    :param event: Event type (doorbell, motion, rfid, input)
+    :param param: param value of schedule entry to delete
+    :return: True if OK, False if not
     """
-    def disable_notification(self, event):
-        url = self.__url("notification.cgi", {
-            "event": event,
-            "subscribe": 0
+    def delete_schedule(self, event, param=""):
+        url = self.__url("schedule.cgi", {
+            "action": "remove",
+            "input": event,
+            "param": param
         }, auth=False)
         response, content = self._http.request(url)
         return int(response["status"]) == 200
@@ -163,7 +132,7 @@ class DoorBird(object):
     """
     The current state of the doorbell.
     
-    :returns: True for pressed, False for idle
+    :return: True for pressed, False for idle
     """
     def doorbell_state(self):
         url = self.__url("monitor.cgi", {
@@ -180,7 +149,7 @@ class DoorBird(object):
     """
     The current state of the motion sensor.
     
-    :returns: True for motion, False for idle
+    :return: True for motion, False for idle
     """
     def motion_sensor_state(self):
         url = self.__url("monitor.cgi", {
@@ -195,23 +164,77 @@ class DoorBird(object):
             return False
 
     """
-    Some version information about the device.
+    Get information about the device.
     
-    :returns: A dictionary of the device information:
+    :return: A dictionary of the device information:
     - FIRMWARE
     - BUILD_NUMBER
     - WIFI_MAC_ADDR (if the device is connected via WiFi)
+    - RELAYS list (if firmware version >= 000108) 
+    - DEVICE-TYPE (if firmware version >= 000108)
     """
     def info(self):
         url = self.__url("info.cgi", auth=False)
+        data = self.__request(url)
+        return data["BHA"]["VERSION"][0]
+
+    """
+    Get all saved favorites.
+    
+    :return: dict, as defined by the API.
+    Top level items will be the favorite types (http, sip),
+    which each reference another dict that maps ID
+    to a dict with title and value keys.
+    """
+    def favorites(self):
+        return self.__request(self.__url("favorites.cgi", auth=False))
+
+    """
+    Add a new saved favorite or change an existing one.
+    
+    :param fav_type: sip or http
+    :param title: Short description
+    :param value: URL including protocol and credentials
+    :param fav_id: The ID of the favorite, only used when editing existing favorites
+    :return: successful, True or False
+    """
+    def change_favorite(self, fav_type, title, value, fav_id=None):
+        args = {
+            "action": "save",
+            "type": fav_type,
+            "title": title,
+            "value": value
+        }
+
+        if fav_id:
+            args["id"] = int(fav_id)
+
+        url = self.__url("favorites.cgi", args, auth=False)
         response, content = self._http.request(url)
-        return json.loads(content.decode('utf-8'))["BHA"]["VERSION"][0]
+        return int(response["status"]) == 200
+
+    """
+    Delete a saved favorite.
+
+    :param fav_type: sip or http
+    :param fav_id: The ID of the favorite
+    :return: successful, True or False
+    """
+    def delete_favorite(self, fav_type, fav_id):
+        url = self.__url("favorites.cgi", {
+            "action": "remove",
+            "type": fav_type,
+            "id": fav_id
+        }, auth=False)
+
+        response, content = self._http.request(url)
+        return int(response["status"]) == 200
 
     """
     Live video request over RTSP.
     
     :param http: Set to True to use RTSP over HTTP
-    :returns: The URL for the MPEG H.264 live video stream
+    :return: The URL for the MPEG H.264 live video stream
     """
     @property
     def rtsp_live_video_url(self, http=False):
@@ -220,7 +243,7 @@ class DoorBird(object):
     """
     The HTML5 viewer for interaction from other platforms.
     
-    :returns: The URL of the viewer
+    :return: The URL of the viewer
     """
     @property
     def html5_viewer_url(self):
@@ -233,7 +256,7 @@ class DoorBird(object):
     :param args: A dictionary of query parameters
     :param port: The port to use (defaults to 80)
     :param auth: Set to False to remove the URL authentication
-    :returns: The full URL
+    :return: The full URL
     """
     def __url(self, path, args=None, port=80, auth=True):
         query = urlencode(args) if args else ""
@@ -245,3 +268,15 @@ class DoorBird(object):
         else:
             template = "http://{}:{}/bha-api/{}?{}"
             return template.format(self._ip, port, path, query)
+
+    """
+    Call a URL on the device.
+    
+    :param url: The full URL to the API call
+    :return: The JSON-decoded data sent by the device
+    """
+    def __request(self, url):
+        response, content = self._http.request(url)
+        body_json = content.decode(encoding='utf-8')
+        body_data = json.loads(body_json)
+        return body_data
