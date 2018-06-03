@@ -110,7 +110,8 @@ class DoorBird(object):
     """
     def change_schedule(self, entry):
         url = self.__url("schedule.cgi", auth=False)
-        response, content = self._http.request(url, "POST", json.dumps(entry.export))
+        response, content = self._http.request(url, "POST", json.dumps(entry.export),
+                                               headers={"Content-Type": "application/json"})
         return int(response["status"]) == 200, response["status"]
 
     """

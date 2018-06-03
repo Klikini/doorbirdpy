@@ -64,7 +64,7 @@ class DoorBirdScheduleEntryOutput(object):
     @staticmethod
     def parse(data):
         return DoorBirdScheduleEntryOutput(
-            enabled=data["enabled"],
+            enabled=bool(data["enabled"]) if "enabled" in data else False,
             event=data["event"],
             param=data["param"],
             schedule=DoorBirdScheduleEntrySchedule.parse(data["schedule"]))
@@ -78,7 +78,7 @@ class DoorBirdScheduleEntryOutput(object):
     @property
     def export(self) -> dict:
         return {
-            "enabled": self.enabled,
+            "enabled": "1" if self.enabled else "0",
             "event": self.event,
             "param": self.param,
             "schedule": self.schedule.export

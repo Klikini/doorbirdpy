@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="DoorBirdPy",
-    version="2.0.0",
+    version="2.0.2",
     author="Andy Castille",
     author_email="andy@robiotic.net",
     packages=["doorbirdpy"],
@@ -11,6 +11,6 @@ setup(
     url="https://github.com/Klikini/doorbirdpy",
     download_url="https://github.com/Klikini/doorbirdpy/archive/master.zip",
     license="MIT",
-    description="Python wrapper for the DoorBird LAN API v0.20",
+    description="Python wrapper for the DoorBird LAN API v0.21",
     platforms="Cross Platform"
 )
