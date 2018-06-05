@@ -1,3 +1,7 @@
+**Moved to https://git.robiotic.net/klikini/doorbirdpy**
+
+---
+
 # doorbirdpy
 Python wrapper for the DoorBird LAN API v0.21
 
