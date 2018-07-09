@@ -1,4 +1,4 @@
-**Moved to https://git.robiotic.net/klikini/doorbirdpy**
+**Moved to https://gitlab.com/klikini/doorbirdpy**
 
 ---
 
